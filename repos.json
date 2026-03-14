@@ -4,7 +4,7 @@
       "name": "A137F",
       "repo": "https://github.com/Tamzid228/my-kernel-source",
       "branch": "main",
-      "device": "a137f"
+      "device": "a137ve"
     },
     "withKernelSU": false,
     "toolchains": [
