@@ -51,6 +51,7 @@ jobs:
           git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ env.kernelDir }}
           # Fix 'unknown argument' error for Proton-Clang
           find ./${{ env.kernelDir }} -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
+       
        - name: "⭐ Get toolchains"
          run: |
           mkdir -p ./clang
@@ -60,9 +61,7 @@ jobs:
        - name: "⭐ Generate build arguments"
          id: generate-args
          run: |
-          # We use $(pwd) to get the absolute path so 'make' never gets lost
           CLANG_ROOT=$(pwd)/clang
-          
           args="ARCH=${{ matrix.repos.params.ARCH }} \
           CC=${CLANG_ROOT}/bin/clang \
           NM=${CLANG_ROOT}/bin/llvm-nm \
