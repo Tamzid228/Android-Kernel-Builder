@@ -38,32 +38,39 @@ jobs:
 
        - name: "🔨 Build"
          run: |
-          CLANG_PATH=$(pwd)/clang/bin
-          export PATH=${CLANG_PATH}:$PATH
+          # 1. Define the absolute path to our toolchain
+          CLANG_ROOT=$(pwd)/clang
+          export PATH=${CLANG_ROOT}/bin:$PATH
+          
+          # 2. Enter the kernel source
           cd ./${{ matrix.repos.kernelSource.name }}
           
-          # Force the build to use Clang and its internal LLD linker
+          # 3. Create the MAKE_ARGS - Added 'LD=ld.lld' and 'LLVM=1'
+          # We also add 'LD_LIBRARY_PATH' to make sure the compiler finds its own parts
           MAKE_ARGS="O=../${{ env.OUT_DIR }} \
                     ARCH=arm64 \
-                    CC=clang \
-                    HOSTCC=clang \
-                    HOSTCXX=clang++ \
-                    LD=ld.lld \
                     LLVM=1 \
                     LLVM_IAS=1 \
-                    CLANG_TRIPLE=aarch64-linux-gnu- \
-                    CROSS_COMPILE=aarch64-linux-gnu- \
-                    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+                    CC=clang \
+                    LD=ld.lld \
                     AR=llvm-ar \
                     NM=llvm-nm \
                     OBJCOPY=llvm-objcopy \
                     OBJDUMP=llvm-objdump \
-                    STRIP=llvm-strip"
+                    STRIP=llvm-strip \
+                    OBJSIZE=llvm-size \
+                    READELF=llvm-readelf \
+                    HOSTCC=clang \
+                    HOSTCXX=clang++ \
+                    HOSTLD=ld.lld \
+                    CLANG_TRIPLE=aarch64-linux-gnu- \
+                    CROSS_COMPILE=aarch64-linux-gnu- \
+                    CROSS_COMPILE_ARM32=arm-linux-gnueabi-"
 
-          # 1. Run Defconfig
+          # 4. Run Defconfig
           make $MAKE_ARGS ${{ matrix.repos.kernelSource.device }}_defconfig
           
-          # 2. Start Compiling
+          # 5. Start Compiling
           make $MAKE_ARGS -j$(nproc --all)
 
        - name: "💛 Upload Image"
