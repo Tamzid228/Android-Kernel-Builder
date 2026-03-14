@@ -1,95 +1,64 @@
 name: "Build kernels"
 
+on:
+  workflow_dispatch: # This is what creates the "Run workflow" button
+
 env:
   CONFIGURATION: "repos.json"
   OUT_DIR: "out"
 
-on:
-  workflow_dispatch:
-
 jobs:
-  Set-repos:
-    name: "🐂 Parse repos.json"
-    runs-on: ubuntu-latest
-    outputs:
-      repos: ${{ steps.generate-matrix.outputs.repos }}
-    steps:
-      - name: "😄 Checkout"
-        uses: actions/checkout@v4
-
-      - name: "😆 Generate Matrix"
-        id: generate-matrix
-        run: |
-          echo "repos<<EOF" >> $GITHUB_OUTPUT
-          cat  ${{ env.CONFIGURATION }} >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
   Build-Kernel:
-    name: "🐎 Build kernel"
     runs-on: ubuntu-latest
-    needs:
-      - Set-repos
     strategy:
-      max-parallel: 2
-      fail-fast: false
       matrix:
-        repos: ${{ fromJSON(needs.Set-repos.outputs.repos) }}
-    env:
-      kernelDir: ${{ matrix.repos.kernelSource.name }}
-      DEFCONFIG_NAME: ${{ matrix.repos.kernelSource.device }}_defconfig
+        repos: [ { "kernelSource": { "name": "A137F", "repo": "https://github.com/Tamzid228/my-kernel-source", "branch": "main", "device": "vendor/a13ve" } } ]
     steps:
-      - name: "⭐ Install prerequisites"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential bc curl git zip ftp gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev lftp zstd wget libfl-dev python3 libarchive-tools libncurses-dev libncurses6 lib32ncurses6 lib32z1 libtinfo5
+       - name: "😄 Checkout"
+         uses: actions/checkout@v4
 
-      - name: "⭐ Get kernel source"
-        run: |
-          git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ env.kernelDir }}
-          # Mass-remove GCC-specific flags that break Clang for Samsung A13
-          cd ./${{ env.kernelDir }}
+       - name: "⭐ Install prerequisites"
+         run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc curl git zip gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libncurses-dev libfl-dev
+
+       - name: "⭐ Get kernel source"
+         run: |
+          git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ matrix.repos.kernelSource.name }}
+          cd ./${{ matrix.repos.kernelSource.name }}
+          # Fix common Clang unknown argument errors
           find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
           find . -type f -name "Makefile*" -exec sed -i 's/-fno-var-tracking-assignments//g' {} +
-          find . -type f -name "Makefile*" -exec sed -i 's/-fno-delete-null-pointer-checks//g' {} +
 
-      - name: "⭐ Get toolchains"
-        run: |
-          mkdir -p ./clang
-          git clone --depth=1 -b ${{ matrix.repos.toolchains[0].branch }} ${{ matrix.repos.toolchains[0].repo }} ./clang
+       - name: "⭐ Get toolchain"
+         run: |
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
           chmod -R +x ./clang/bin
 
-      - name: "⭐ Generate build arguments"
-        id: generate-args
-        run: |
-          CLANG_ROOT=$(pwd)/clang
-          args="ARCH=arm64 \
-          CC=${CLANG_ROOT}/bin/clang \
-          NM=${CLANG_ROOT}/bin/llvm-nm \
-          OBJCOPY=${CLANG_ROOT}/bin/llvm-objcopy \
-          OBJDUMP=${CLANG_ROOT}/bin/llvm-objdump \
-          STRIP=${CLANG_ROOT}/bin/llvm-strip \
-          LD=${CLANG_ROOT}/bin/ld.lld \
-          AR=${CLANG_ROOT}/bin/llvm-ar \
-          CROSS_COMPILE=${CLANG_ROOT}/bin/aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=${CLANG_ROOT}/bin/arm-linux-gnueabi- \
-          CLANG_TRIPLE=aarch64-linux-gnu- "
-          echo "args=${args}" >> $GITHUB_OUTPUT
+       - name: "🔨 Build"
+         run: |
+          export PATH=$(pwd)/clang/bin:$PATH
+          cd ./${{ matrix.repos.kernelSource.name }}
+          
+          # Run Defconfig
+          make O=../${{ env.OUT_DIR }} ARCH=arm64 \
+          CC=clang \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+          ${{ matrix.repos.kernelSource.device }}_defconfig
+          
+          # Start Compiling
+          make O=../${{ env.OUT_DIR }} ARCH=arm64 \
+          CC=clang \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+          -j$(nproc --all)
 
-      - name: "🔨 Make defconfig"
-        working-directory: ./${{ env.kernelDir }}
-        run: |
-          make O=../${{ env.OUT_DIR }} ARCH=arm64 ${{ steps.generate-args.outputs.args }} ${{ env.DEFCONFIG_NAME }}
-
-      - name: "🧱 Build kernel"
-        working-directory: ./${{ env.kernelDir }}
-        run: |
-          make O=../${{ env.OUT_DIR }} ARCH=arm64 ${{ steps.generate-args.outputs.args }} -j$(nproc --all)
-
-      - name: "💛 Upload Image"
-        uses: actions/upload-artifact@v4
-        with:
+       - name: "💛 Upload Image"
+         uses: actions/upload-artifact@v4
+         with:
           name: Image-Samsung-A13
-          path: ./${{ env.OUT_DIR }}/arch/arm64/boot/Image
+          path: ./out/arch/arm64/boot/Image
 
        - name: "💙 Upload Image.gz"
          uses: actions/upload-artifact@v4
