@@ -72,17 +72,11 @@ jobs:
           
           echo "args=${args}" >> $GITHUB_OUTPUT
        
-       - name: "🔍 Find my config"
-         working-directory: ./${{ env.kernelDir }}
-         run: |
-          echo "Here are all the arm64 configuration files in this kernel:"
-          find arch/arm64/configs/ -name "*defconfig"
-          
        - name: "🔨 Make defconfig"
          working-directory: ./${{ env.kernelDir }}
          run: |
           make O=../${{ env.OUT_DIR }} ARCH=arm64 ${{ steps.generate-args.outputs.args }} ${{ env.DEFCONFIG_NAME }}
-
+          
        - name: "🧱 Build kernel"
          working-directory: ./${{ env.kernelDir }}
          run: |
