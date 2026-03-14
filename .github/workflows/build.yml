@@ -35,7 +35,7 @@ jobs:
       matrix:
         repos: ${{ fromJSON(needs.Set-repos.outputs.repos) }}
     env:
-      kernelDir: ${{ matrix.repos.kernelSource.name }}_${{ matrix.repos.kernelSource.device }}
+      kernelDir: ${{ matrix.repos.kernelSource.name }}
 
       kernelName: ${{ matrix.repos.kernelSource.name }}
       kernelRepo: ${{ matrix.repos.kernelSource.repo }}
@@ -49,15 +49,16 @@ jobs:
       - name: "✨ Create working dir"
         run: mkdir -p $kernelDir
 
-      - name: "⭐ Install prerequisites"
+      - name: "⭐ Get toolchains"
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential bc curl git zip ftp gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev lftp zstd wget libfl-dev python3 libarchive-tools libncurses-dev libncurses6 lib32ncurses6 lib32z1 libtinfo5
-          
+         mkdir -p ./A137F/clang
+         git clone --depth=1 ${{ matrix.repos.toolchains[0].repo }} -b ${{ matrix.repos.toolchains[0].branch }} ./A137F/clang
+         chmod -R +x ./A137F/clang/bin
+      
       - name: "🌟 Clone kernel source => (${{ env.kernelRepo }})"
         working-directory: ./${{ env.kernelDir }}
         run: |
-          git clone --recursive --branch $kernelBranch $kernelRepo $kernelName --depth=1
+          git clone --depth=1 --branch $kernelBranch $kernelRepo $kernelName
 
       - name: "💫 Get toolchains"
         working-directory: ./${{ env.kernelDir }}
