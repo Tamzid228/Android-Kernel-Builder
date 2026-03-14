@@ -46,6 +46,11 @@ jobs:
 
       withKernelSU: ${{ matrix.repos.withKernelSU }}
     steps:
+       - name: "⭐ Get kernel source"
+         run: |
+          git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ env.kernelDir }}
+          # Fix 'unknown argument' error for Proton-Clang
+          find ./${{ env.kernelDir }} -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
        - name: "⭐ Get toolchains"
          run: |
           mkdir -p ./clang
