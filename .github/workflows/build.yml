@@ -70,7 +70,28 @@ jobs:
             echo "$(pwd)/$name/" >> $GITHUB_PATH
             echo "$(pwd)/$name/bin" >> $GITHUB_PATH
           done
-
+      - name: "⭐ Generate build arguments"
+        id: generate-args
+        run: |
+          # Use absolute paths so the server doesn't get lost
+          KERNEL_ROOT=$(pwd)/${{ env.kernelDir }}
+          CLANG_ROOT=${KERNEL_ROOT}/clang
+          
+          args="-C ${KERNEL_ROOT} \
+          O=${{ env.OUT_DIR }} \
+          ARCH=${{ matrix.repos.params.ARCH }} \
+          CC=${CLANG_ROOT}/bin/clang \
+          NM=${CLANG_ROOT}/bin/llvm-nm \
+          OBJCOPY=${CLANG_ROOT}/bin/llvm-objcopy \
+          OBJDUMP=${CLANG_ROOT}/bin/llvm-objdump \
+          STRIP=${CLANG_ROOT}/bin/llvm-strip \
+          LD=${CLANG_ROOT}/bin/ld.lld \
+          AR=${CLANG_ROOT}/bin/llvm-ar \
+          CROSS_COMPILE=${CLANG_ROOT}/bin/aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=${CLANG_ROOT}/bin/arm-linux-gnueabi- \
+          CLANG_TRIPLE=aarch64-linux-gnu- "
+          
+          echo "args=${args}" >> $GITHUB_OUTPUT
           echo "PATH Variable: $PATH"
 
       - name: "😎 Set args"
@@ -141,7 +162,7 @@ jobs:
           args: ${{ steps.generate-args.outputs.args }}
         run: |
           echo "PATH Variable: $PATH"
-          make ${{ env.args }} ${{ env.DEFCONFIG_NAME }}
+          make ${{ steps.generate-args.outputs.args }} ${{ env.DEFCONFIG_NAME }}
 
       - name: "🎶 Build kernel"
         working-directory: ./${{ env.kernelDir }}/${{ env.kernelName }}
@@ -149,7 +170,7 @@ jobs:
           args: ${{ steps.generate-args.outputs.args }}
         run: |
           echo "PATH Variable: $PATH"
-          make ${args}
+          make ${{ steps.generate-args.outputs.args }} -j$(nproc --all)
 
       - name: "💛 Upload Image"
         uses: actions/upload-artifact@v4
