@@ -55,10 +55,9 @@ jobs:
          git clone --depth=1 ${{ matrix.repos.toolchains[0].repo }} -b ${{ matrix.repos.toolchains[0].branch }} ./A137F/clang
          chmod -R +x ./A137F/clang/bin
       
-      - name: "🌟 Clone kernel source => (${{ env.kernelRepo }})"
-        working-directory: ./${{ env.kernelDir }}
+      - name: "⭐ Get kernel source"
         run: |
-          git clone --depth=1 --branch $kernelBranch $kernelRepo $kernelName
+          git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ env.kernelDir }}
 
       - name: "💫 Get toolchains"
         working-directory: ./${{ env.kernelDir }}
