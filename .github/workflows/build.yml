@@ -9,7 +9,7 @@ env:
 
 jobs:
   Build-Kernel:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # <--- Change this line
     strategy:
       matrix:
         repos: [ { "kernelSource": { "name": "A137F", "repo": "https://github.com/Tamzid228/my-kernel-source", "branch": "main", "device": "a13ve" } } ]
@@ -42,16 +42,18 @@ jobs:
           export PATH=${CLANG_PATH}:$PATH
           cd ./${{ matrix.repos.kernelSource.name }}
           
-          # Force the build to use Clang for everything to avoid library errors
+          # Force the build to use Clang and its internal LLD linker
           MAKE_ARGS="O=../${{ env.OUT_DIR }} \
                     ARCH=arm64 \
                     CC=clang \
                     HOSTCC=clang \
                     HOSTCXX=clang++ \
+                    LD=ld.lld \
+                    LLVM=1 \
+                    LLVM_IAS=1 \
                     CLANG_TRIPLE=aarch64-linux-gnu- \
                     CROSS_COMPILE=aarch64-linux-gnu- \
                     CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-                    LD=ld.lld \
                     AR=llvm-ar \
                     NM=llvm-nm \
                     OBJCOPY=llvm-objcopy \
