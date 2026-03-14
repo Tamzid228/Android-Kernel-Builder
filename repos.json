@@ -1,7 +1,7 @@
 [
   {
     "kernelSource": {
-      "name": "my-kernel-source",
+      "name": "A137F",
       "repo": "https://github.com/Tamzid228/my-kernel-source",
       "branch": "main",
       "device": "a137f"
@@ -17,14 +17,9 @@
     "params": {
       "ARCH": "arm64",
       "CC": "clang",
-      "NM": "llvm-nm",
-      "OBJCOPY": "llvm-objcopy",
-      "OBJDUMP": "llvm-objdump",
-      "STRIP": "llvm-strip",
       "CROSS_COMPILE": "aarch64-linux-gnu-",
       "CROSS_COMPILE_ARM32": "arm-linux-gnueabi-",
-      "LD": "ld.lld",
-      "AR": "llvm-ar"
+      "LD": "ld.lld"
     }
   }
 ]
