@@ -13,7 +13,9 @@
         "branch": "master",
         "name": "clang"
       }
-    ],
+    ]
+  }
+]
     "params": {
       "ARCH": "arm64",
       "CC": "clang",
