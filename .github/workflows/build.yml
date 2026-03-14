@@ -47,10 +47,9 @@ jobs:
       withKernelSU: ${{ matrix.repos.withKernelSU }}
     steps:
       - name: "⭐ Get toolchains"
-        working-directory: ./${{ env.kernelDir }}
         run: |
-          git clone --depth=1 -b ${{ matrix.repos.toolchains[0].branch }} ${{ matrix.repos.toolchains[0].repo }} clang
-          chmod -R +x ./clang/bin
+          git clone --depth=1 -b ${{ matrix.repos.toolchains[0].branch }} ${{ matrix.repos.toolchains[0].repo }} ./${{ env.kernelDir }}/clang
+          chmod -R +x ./${{ env.kernelDir }}/clang/bin
       
       - name: "⭐ Get kernel source"
         run: |
