@@ -22,7 +22,6 @@ jobs:
         run: |
           git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ matrix.repos.kernelSource.name }}
           cd ./${{ matrix.repos.kernelSource.name }}
-          # Fix common Clang unknown argument errors
           find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
           find . -type f -name "Makefile*" -exec sed -i 's/-fno-var-tracking-assignments//g' {} +
 
@@ -37,29 +36,23 @@ jobs:
           export PATH=${CLANG_ROOT}/bin:$PATH
           cd ./${{ matrix.repos.kernelSource.name }}
           
-          # Force the build to use Clang toolchain correctly
-          # IMPORTANT: No spaces before the backslashes '\'
-          MAKE_ARGS="ARCH=arm64 \
-          LLVM=1 \
-          LLVM_IAS=1 \
-          CC=clang \
-          LD=ld.lld \
-          AR=llvm-ar \
-          NM=llvm-nm \
-          OBJCOPY=llvm-objcopy \
-          OBJDUMP=llvm-objdump \
-          STRIP=llvm-strip \
-          HOSTCC=clang \
-          HOSTCXX=clang++ \
-          HOSTLD=ld.lld \
-          CLANG_TRIPLE=aarch64-linux-gnu- \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=arm-linux-gnueabi-"
+          # We use simple variables to avoid YAML mapping errors
+          export ARCH=arm64
+          export LLVM=1
+          export LLVM_IAS=1
+          export CC=clang
+          export LD=ld.lld
+          export HOSTCC=clang
+          export HOSTCXX=clang++
+          export HOSTLD=ld.lld
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-          # Clean, Config, and Build
-          make $MAKE_ARGS clean mrproper
-          make $MAKE_ARGS ${{ matrix.repos.kernelSource.device }}_defconfig
-          make $MAKE_ARGS -j$(nproc --all)
+          # Clean and Build
+          make clean mrproper
+          make ${{ matrix.repos.kernelSource.device }}_defconfig
+          make -j$(nproc --all)
 
       - name: "💛 Upload Image"
         uses: actions/upload-artifact@v4
