@@ -36,33 +36,33 @@ jobs:
         repos: ${{ fromJSON(needs.Set-repos.outputs.repos) }}
     env:
       kernelDir: ${{ matrix.repos.kernelSource.name }}
-
-      kernelName: ${{ matrix.repos.kernelSource.name }}
-      kernelRepo: ${{ matrix.repos.kernelSource.repo }}
-      kernelBranch: ${{ matrix.repos.kernelSource.branch }}
-      kernelDevice: ${{ matrix.repos.kernelSource.device }}
-
       DEFCONFIG_NAME: ${{ matrix.repos.kernelSource.device }}_defconfig
-
-      withKernelSU: ${{ matrix.repos.withKernelSU }}
     steps:
-       - name: "⭐ Get kernel source"
-         run: |
+      - name: "⭐ Install prerequisites"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc curl git zip ftp gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev lftp zstd wget libfl-dev python3 libarchive-tools libncurses-dev libncurses6 lib32ncurses6 lib32z1 libtinfo5
+
+      - name: "⭐ Get kernel source"
+        run: |
           git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ env.kernelDir }}
-          # Fix 'unknown argument' error for Proton-Clang
-          find ./${{ env.kernelDir }} -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
-       
-       - name: "⭐ Get toolchains"
-         run: |
+          # Mass-remove GCC-specific flags that break Clang for Samsung A13
+          cd ./${{ env.kernelDir }}
+          find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
+          find . -type f -name "Makefile*" -exec sed -i 's/-fno-var-tracking-assignments//g' {} +
+          find . -type f -name "Makefile*" -exec sed -i 's/-fno-delete-null-pointer-checks//g' {} +
+
+      - name: "⭐ Get toolchains"
+        run: |
           mkdir -p ./clang
           git clone --depth=1 -b ${{ matrix.repos.toolchains[0].branch }} ${{ matrix.repos.toolchains[0].repo }} ./clang
           chmod -R +x ./clang/bin
 
-       - name: "⭐ Generate build arguments"
-         id: generate-args
-         run: |
+      - name: "⭐ Generate build arguments"
+        id: generate-args
+        run: |
           CLANG_ROOT=$(pwd)/clang
-          args="ARCH=${{ matrix.repos.params.ARCH }} \
+          args="ARCH=arm64 \
           CC=${CLANG_ROOT}/bin/clang \
           NM=${CLANG_ROOT}/bin/llvm-nm \
           OBJCOPY=${CLANG_ROOT}/bin/llvm-objcopy \
@@ -73,26 +73,23 @@ jobs:
           CROSS_COMPILE=${CLANG_ROOT}/bin/aarch64-linux-gnu- \
           CROSS_COMPILE_ARM32=${CLANG_ROOT}/bin/arm-linux-gnueabi- \
           CLANG_TRIPLE=aarch64-linux-gnu- "
-          
           echo "args=${args}" >> $GITHUB_OUTPUT
-       
-       - name: "🔨 Make defconfig"
-         working-directory: ./${{ env.kernelDir }}
-         run: |
-          make O=../${{ env.OUT_DIR }} ARCH=arm64 ${{ steps.generate-args.outputs.args }} ${{ env.DEFCONFIG_NAME }}
-          
-       - name: "🧱 Build kernel"
-         working-directory: ./${{ env.kernelDir }}
-         run: |
-          make O=../${{ env.OUT_DIR }} ${{ steps.generate-args.outputs.args }} -j$(nproc --all)
 
-       - name: "💛 Upload Image"
-         uses: actions/upload-artifact@v4
-         with:
-          name: Image(${{ env.kernelDevice }}-${{ env.kernelName }}-${{ env.kernelBranch }})
-          path: ./${{ env.kernelDir }}/${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image
-          if-no-files-found: ignore
-          retention-days: 7
+      - name: "🔨 Make defconfig"
+        working-directory: ./${{ env.kernelDir }}
+        run: |
+          make O=../${{ env.OUT_DIR }} ARCH=arm64 ${{ steps.generate-args.outputs.args }} ${{ env.DEFCONFIG_NAME }}
+
+      - name: "🧱 Build kernel"
+        working-directory: ./${{ env.kernelDir }}
+        run: |
+          make O=../${{ env.OUT_DIR }} ARCH=arm64 ${{ steps.generate-args.outputs.args }} -j$(nproc --all)
+
+      - name: "💛 Upload Image"
+        uses: actions/upload-artifact@v4
+        with:
+          name: Image-Samsung-A13
+          path: ./${{ env.OUT_DIR }}/arch/arm64/boot/Image
 
        - name: "💙 Upload Image.gz"
          uses: actions/upload-artifact@v4
