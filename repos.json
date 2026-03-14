@@ -1,7 +1,8 @@
+
 [
   {
     "kernelSource": {
-      "name": "A137F_Kernel",
+      "name": "my-kernel-source",
       "repo": "https://github.com/Tamzid228/my-kernel-source",
       "branch": "main",
       "device": "a137f"
