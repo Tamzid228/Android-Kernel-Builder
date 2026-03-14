@@ -1,11 +1,7 @@
 name: "Build kernels"
 
 on:
-  workflow_dispatch: # This is what creates the "Run workflow" button
-
-env:
-  CONFIGURATION: "repos.json"
-  OUT_DIR: "out"
+  workflow_dispatch:
 
 jobs:
   Build-Kernel:
@@ -14,59 +10,60 @@ jobs:
       matrix:
         repos: [ { "kernelSource": { "name": "A137F", "repo": "https://github.com/Tamzid228/my-kernel-source", "branch": "main", "device": "a13ve" } } ]
     steps:
-       - name: "😄 Checkout"
-         uses: actions/checkout@v4
+      - name: "😄 Checkout"
+        uses: actions/checkout@v4
 
-       - name: "⭐ Install prerequisites"
-         run: |
+      - name: "⭐ Install prerequisites"
+        run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc curl git zip gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libncurses-dev libfl-dev
 
-       - name: "⭐ Get kernel source"
-         run: |
+      - name: "⭐ Get kernel source"
+        run: |
           git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ matrix.repos.kernelSource.name }}
           cd ./${{ matrix.repos.kernelSource.name }}
           # Fix common Clang unknown argument errors
           find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
           find . -type f -name "Makefile*" -exec sed -i 's/-fno-var-tracking-assignments//g' {} +
 
-       - name: "⭐ Get toolchain"
-         run: |
+      - name: "⭐ Get toolchain"
+        run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
           chmod -R +x ./clang/bin
 
-       - name: "🔨 Build"
-         run: |
+      - name: "🔨 Build"
+        run: |
           CLANG_ROOT=$(pwd)/clang
           export PATH=${CLANG_ROOT}/bin:$PATH
           cd ./${{ matrix.repos.kernelSource.name }}
           
-          # Use LLVM=1 to force the build to use the Clang toolchain correctly
+          # Force the build to use Clang toolchain correctly
+          # IMPORTANT: No spaces before the backslashes '\'
           MAKE_ARGS="ARCH=arm64 \
-                    LLVM=1 \
-                    LLVM_IAS=1 \
-                    CC=clang \
-                    LD=ld.lld \
-                    AR=llvm-ar \
-                    NM=llvm-nm \
-                    OBJCOPY=llvm-objcopy \
-                    OBJDUMP=llvm-objdump \
-                    STRIP=llvm-strip \
-                    HOSTCC=clang \
-                    HOSTCXX=clang++ \
-                    HOSTLD=ld.lld \
-                    CLANG_TRIPLE=aarch64-linux-gnu- \
-                    CROSS_COMPILE=aarch64-linux-gnu- \
-                    CROSS_COMPILE_ARM32=arm-linux-gnueabi-"
+          LLVM=1 \
+          LLVM_IAS=1 \
+          CC=clang \
+          LD=ld.lld \
+          AR=llvm-ar \
+          NM=llvm-nm \
+          OBJCOPY=llvm-objcopy \
+          OBJDUMP=llvm-objdump \
+          STRIP=llvm-strip \
+          HOSTCC=clang \
+          HOSTCXX=clang++ \
+          HOSTLD=ld.lld \
+          CLANG_TRIPLE=aarch64-linux-gnu- \
+          CROSS_COMPILE=aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=arm-linux-gnueabi-"
 
-          # Clean and Build
+          # Clean, Config, and Build
           make $MAKE_ARGS clean mrproper
           make $MAKE_ARGS ${{ matrix.repos.kernelSource.device }}_defconfig
           make $MAKE_ARGS -j$(nproc --all)
 
-       - name: "💛 Upload Image"
-         uses: actions/upload-artifact@v4
-         with:
+      - name: "💛 Upload Image"
+        uses: actions/upload-artifact@v4
+        with:
           name: Image-Samsung-A13
           path: ./${{ matrix.repos.kernelSource.name }}/arch/arm64/boot/Image
 
