@@ -33,25 +33,27 @@ jobs:
        - name: "⭐ Get toolchain"
          run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
+          # This line gives the compiler permission to run
           chmod -R +x ./clang/bin
 
        - name: "🔨 Build"
          run: |
-          export PATH=$(pwd)/clang/bin:$PATH
+          # Get the full path of the clang folder
+          CLANG_PATH=$(pwd)/clang/bin
           cd ./${{ matrix.repos.kernelSource.name }}
           
           # Run Defconfig
           make O=../${{ env.OUT_DIR }} ARCH=arm64 \
-          CC=clang \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+          CC=${CLANG_PATH}/clang \
+          CROSS_COMPILE=${CLANG_PATH}/aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=${CLANG_PATH}/arm-linux-gnueabi- \
           ${{ matrix.repos.kernelSource.device }}_defconfig
           
           # Start Compiling
           make O=../${{ env.OUT_DIR }} ARCH=arm64 \
-          CC=clang \
-          CROSS_COMPILE=aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+          CC=${CLANG_PATH}/clang \
+          CROSS_COMPILE=${CLANG_PATH}/aarch64-linux-gnu- \
+          CROSS_COMPILE_ARM32=${CLANG_PATH}/arm-linux-gnueabi- \
           -j$(nproc --all)
 
        - name: "💛 Upload Image"
