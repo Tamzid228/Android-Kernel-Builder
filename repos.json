@@ -1,10 +1,29 @@
 [
   {
-    "kernel_source": "https://github.com/Tamzid228/my-kernel-source",
-    "kernel_branch": "main",
-    "device_defconfig": "a137f_defconfig",
-    "compiler": "clang",
-    "clang_version": "r383902",
-    "anykernel_branch": "master"
+    "kernelSource": {
+      "name": "A137F_Kernel",
+      "repo": "https://github.com/Tamzid228/my-kernel-source",
+      "branch": "main",
+      "device": "a137f"
+    },
+    "withKernelSU": false,
+    "toolchains": [
+      {
+        "repo": "https://github.com/kdrag0n/proton-clang",
+        "branch": "master",
+        "name": "clang"
+      }
+    ],
+    "params": {
+      "ARCH": "arm64",
+      "CC": "clang",
+      "NM": "llvm-nm",
+      "OBJCOPY": "llvm-objcopy",
+      "OBJDUMP": "llvm-objdump",
+      "STRIP": "llvm-strip",
+      "CROSS_COMPILE": "aarch64-linux-gnu-",
+      "CROSS_COMPILE_ARM32": "arm-linux-gnueabi-",
+      "LD": "ld.lld"
+    }
   }
 ]
