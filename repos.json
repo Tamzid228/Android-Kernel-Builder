@@ -14,7 +14,7 @@
         "name": "clang"
       }
     ],
-   "params": {
+    "params": {
       "ARCH": "arm64",
       "CC": "clang",
       "LD": "ld.lld",
