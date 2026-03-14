@@ -9,7 +9,7 @@ env:
 
 jobs:
   Build-Kernel:
-    runs-on: ubuntu-22.04  # <--- Change this line
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         repos: [ { "kernelSource": { "name": "A137F", "repo": "https://github.com/Tamzid228/my-kernel-source", "branch": "main", "device": "a13ve" } } ]
@@ -33,22 +33,16 @@ jobs:
        - name: "⭐ Get toolchain"
          run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
-          # This line gives the compiler permission to run
           chmod -R +x ./clang/bin
 
        - name: "🔨 Build"
          run: |
-          # 1. Define the absolute path to our toolchain
           CLANG_ROOT=$(pwd)/clang
           export PATH=${CLANG_ROOT}/bin:$PATH
-          
-          # 2. Enter the kernel source
           cd ./${{ matrix.repos.kernelSource.name }}
           
-          # 3. Create the MAKE_ARGS - Added 'LD=ld.lld' and 'LLVM=1'
-          # We also add 'LD_LIBRARY_PATH' to make sure the compiler finds its own parts
-          MAKE_ARGS="O=../${{ env.OUT_DIR }} \
-                    ARCH=arm64 \
+          # Use LLVM=1 to force the build to use the Clang toolchain correctly
+          MAKE_ARGS="ARCH=arm64 \
                     LLVM=1 \
                     LLVM_IAS=1 \
                     CC=clang \
@@ -58,8 +52,6 @@ jobs:
                     OBJCOPY=llvm-objcopy \
                     OBJDUMP=llvm-objdump \
                     STRIP=llvm-strip \
-                    OBJSIZE=llvm-size \
-                    READELF=llvm-readelf \
                     HOSTCC=clang \
                     HOSTCXX=clang++ \
                     HOSTLD=ld.lld \
@@ -67,17 +59,16 @@ jobs:
                     CROSS_COMPILE=aarch64-linux-gnu- \
                     CROSS_COMPILE_ARM32=arm-linux-gnueabi-"
 
-          # 4. Run Defconfig
+          # Clean and Build
+          make $MAKE_ARGS clean mrproper
           make $MAKE_ARGS ${{ matrix.repos.kernelSource.device }}_defconfig
-          
-          # 5. Start Compiling
           make $MAKE_ARGS -j$(nproc --all)
 
        - name: "💛 Upload Image"
          uses: actions/upload-artifact@v4
          with:
           name: Image-Samsung-A13
-          path: ./out/arch/arm64/boot/Image
+          path: ./${{ matrix.repos.kernelSource.name }}/arch/arm64/boot/Image
 
        - name: "💙 Upload Image.gz"
          uses: actions/upload-artifact@v4
