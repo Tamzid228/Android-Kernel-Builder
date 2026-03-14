@@ -36,7 +36,7 @@ jobs:
           export PATH=${CLANG_ROOT}/bin:$PATH
           cd ./${{ matrix.repos.kernelSource.name }}
           
-          # We use simple variables to avoid YAML mapping errors
+          # Environment Variables
           export ARCH=arm64
           export LLVM=1
           export LLVM_IAS=1
@@ -49,9 +49,13 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-          # Clean and Build
+          # 1. Clean up
           make clean mrproper
+          
+          # 2. Run Defconfig
           make ${{ matrix.repos.kernelSource.device }}_defconfig
+          
+          # 3. Start Compiling
           make -j$(nproc --all)
 
       - name: "💛 Upload Image"
