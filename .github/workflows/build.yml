@@ -75,7 +75,7 @@ jobs:
        - name: "🔨 Make defconfig"
          working-directory: ./${{ env.kernelDir }}
          run: |
-          make O=../${{ env.OUT_DIR }} ${{ steps.generate-args.outputs.args }} ${{ env.DEFCONFIG_NAME }}
+          make O=../${{ env.OUT_DIR }} ARCH=arm64 ${{ steps.generate-args.outputs.args }} ${{ env.DEFCONFIG_NAME }}
 
        - name: "🧱 Build kernel"
          working-directory: ./${{ env.kernelDir }}
