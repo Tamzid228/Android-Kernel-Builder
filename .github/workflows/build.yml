@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repos: [ { "kernelSource": { "name": "A137F", "repo": "https://github.com/Tamzid228/my-kernel-source", "branch": "main", "device": "vendor/a13ve" } } ]
+        repos: [ { "kernelSource": { "name": "A137F", "repo": "https://github.com/Tamzid228/my-kernel-source", "branch": "main", "device": "a13ve" } } ]
     steps:
        - name: "😄 Checkout"
          uses: actions/checkout@v4
@@ -38,23 +38,31 @@ jobs:
 
        - name: "🔨 Build"
          run: |
-          # Get the full path of the clang folder
           CLANG_PATH=$(pwd)/clang/bin
+          export PATH=${CLANG_PATH}:$PATH
           cd ./${{ matrix.repos.kernelSource.name }}
           
-          # Run Defconfig
-          make O=../${{ env.OUT_DIR }} ARCH=arm64 \
-          CC=${CLANG_PATH}/clang \
-          CROSS_COMPILE=${CLANG_PATH}/aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=${CLANG_PATH}/arm-linux-gnueabi- \
-          ${{ matrix.repos.kernelSource.device }}_defconfig
+          # Force the build to use Clang for everything to avoid library errors
+          MAKE_ARGS="O=../${{ env.OUT_DIR }} \
+                    ARCH=arm64 \
+                    CC=clang \
+                    HOSTCC=clang \
+                    HOSTCXX=clang++ \
+                    CLANG_TRIPLE=aarch64-linux-gnu- \
+                    CROSS_COMPILE=aarch64-linux-gnu- \
+                    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+                    LD=ld.lld \
+                    AR=llvm-ar \
+                    NM=llvm-nm \
+                    OBJCOPY=llvm-objcopy \
+                    OBJDUMP=llvm-objdump \
+                    STRIP=llvm-strip"
+
+          # 1. Run Defconfig
+          make $MAKE_ARGS ${{ matrix.repos.kernelSource.device }}_defconfig
           
-          # Start Compiling
-          make O=../${{ env.OUT_DIR }} ARCH=arm64 \
-          CC=${CLANG_PATH}/clang \
-          CROSS_COMPILE=${CLANG_PATH}/aarch64-linux-gnu- \
-          CROSS_COMPILE_ARM32=${CLANG_PATH}/arm-linux-gnueabi- \
-          -j$(nproc --all)
+          # 2. Start Compiling
+          make $MAKE_ARGS -j$(nproc --all)
 
        - name: "💛 Upload Image"
          uses: actions/upload-artifact@v4
