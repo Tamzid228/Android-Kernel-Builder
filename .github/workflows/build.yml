@@ -71,7 +71,13 @@ jobs:
           CLANG_TRIPLE=aarch64-linux-gnu- "
           
           echo "args=${args}" >> $GITHUB_OUTPUT
-
+       
+       - name: "🔍 Find my config"
+         working-directory: ./${{ env.kernelDir }}
+         run: |
+          echo "Here are all the arm64 configuration files in this kernel:"
+          find arch/arm64/configs/ -name "*defconfig"
+          
        - name: "🔨 Make defconfig"
          working-directory: ./${{ env.kernelDir }}
          run: |
