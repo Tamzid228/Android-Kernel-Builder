@@ -1,4 +1,4 @@
-name: "Unified Kernel Builder"
+name: "Clean Slate Kernel Builder"
 
 on:
   workflow_dispatch:
@@ -10,13 +10,16 @@ jobs:
       - name: "😄 Checkout"
         uses: actions/checkout@v4
 
-      - name: "⭐ Setup Environment"
+      - name: "⭐ Install Prerequisites"
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc curl git zip gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libncurses-dev libfl-dev
 
-      - name: "⭐ Download Source & Toolchain"
+      - name: "⭐ Fresh Download"
         run: |
+          # Wipe old folders to prevent "Already Exists" errors
+          rm -rf A137F clang
+          
           # Clone Kernel Source
           git clone --depth=1 -b main https://github.com/Tamzid228/my-kernel-source A137F
           
@@ -29,7 +32,7 @@ jobs:
           export PATH=$(pwd)/clang/bin:$PATH
           cd A137F
           
-          # Setup Build Flags
+          # Force the environment
           export ARCH=arm64
           export LLVM=1
           export LLVM_IAS=1
@@ -39,7 +42,7 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-          # Fix known Makefile errors
+          # Fix Makefile errors
           find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
           
           # Build
@@ -47,7 +50,8 @@ jobs:
           make a13ve_defconfig
           make -j$(nproc --all)
 
-      - name: "💛 Upload Result"
+      - name: "💛 Upload Final Image"
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Samsung-A13-Kernel
