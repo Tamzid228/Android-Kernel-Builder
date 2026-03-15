@@ -17,13 +17,8 @@ jobs:
 
       - name: "⭐ Fresh Download"
         run: |
-          # Wipe old folders to prevent "Already Exists" errors
           rm -rf A137F clang
-          
-          # Clone Kernel Source
           git clone --depth=1 -b main https://github.com/Tamzid228/my-kernel-source A137F
-          
-          # Clone Toolchain
           git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
           chmod -R +x ./clang/bin
 
@@ -32,7 +27,6 @@ jobs:
           export PATH=$(pwd)/clang/bin:$PATH
           cd A137F
           
-          # Force the environment
           export ARCH=arm64
           export LLVM=1
           export LLVM_IAS=1
@@ -45,9 +39,14 @@ jobs:
           # Fix Makefile errors
           find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
           
-          # Build
+          # AUTO-DETECT CONFIG: This looks for the right a13ve file
+          CONF_FILE=$(find arch/arm64/configs/ -name "*a13ve_defconfig*" | sed 's|arch/arm64/configs/||')
+          echo "Found Config: $CONF_FILE"
+          
           make clean mrproper
-          make a13ve_defconfig
+          # If it found a file, use it. Otherwise, fallback to vendor/a13ve_defconfig
+          make ${CONF_FILE:-vendor/a13ve_defconfig}
+          
           make -j$(nproc --all)
 
       - name: "💛 Upload Final Image"
