@@ -1,4 +1,4 @@
-name: "Build kernels"
+name: "Unified Kernel Builder"
 
 on:
   workflow_dispatch:
@@ -6,54 +6,49 @@ on:
 jobs:
   Build-Kernel:
     runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        repos: [ { "kernelSource": { "name": "A137F", "repo": "https://github.com/Tamzid228/my-kernel-source", "branch": "main", "device": "a13ve" } } ]
     steps:
       - name: "😄 Checkout"
         uses: actions/checkout@v4
 
-      - name: "⭐ Install prerequisites"
+      - name: "⭐ Setup Environment"
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc curl git zip gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libncurses-dev libfl-dev
 
-      - name: "⭐ Get kernel source"
+      - name: "⭐ Download Source & Toolchain"
         run: |
-          git clone --depth=1 -b ${{ matrix.repos.kernelSource.branch }} ${{ matrix.repos.kernelSource.repo }} ${{ matrix.repos.kernelSource.name }}
-          cd ./${{ matrix.repos.kernelSource.name }}
-          find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
-          find . -type f -name "Makefile*" -exec sed -i 's/-fno-var-tracking-assignments//g' {} +
-
-      - name: "⭐ Get toolchain"
-        run: |
+          # Clone Kernel Source
+          git clone --depth=1 -b main https://github.com/Tamzid228/my-kernel-source A137F
+          
+          # Clone Toolchain
           git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
           chmod -R +x ./clang/bin
 
-      - name: "🔨 Build"
+      - name: "🔨 Compile Kernel"
         run: |
-          CLANG_ROOT=$(pwd)/clang
-          export PATH=${CLANG_ROOT}/bin:$PATH
-          cd ./${{ matrix.repos.kernelSource.name }}
+          export PATH=$(pwd)/clang/bin:$PATH
+          cd A137F
           
+          # Setup Build Flags
           export ARCH=arm64
           export LLVM=1
           export LLVM_IAS=1
           export CC=clang
           export LD=ld.lld
-          export HOSTCC=clang
-          export HOSTCXX=clang++
-          export HOSTLD=ld.lld
           export CLANG_TRIPLE=aarch64-linux-gnu-
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
+          # Fix known Makefile errors
+          find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
+          
+          # Build
           make clean mrproper
-          make ${{ matrix.repos.kernelSource.device }}_defconfig
+          make a13ve_defconfig
           make -j$(nproc --all)
 
-      - name: "💛 Upload Image"
+      - name: "💛 Upload Result"
         uses: actions/upload-artifact@v4
         with:
-          name: Image-Samsung-A13
-          path: ./${{ matrix.repos.kernelSource.name }}/arch/arm64/boot/Image
+          name: Samsung-A13-Kernel
+          path: A137F/arch/arm64/boot/Image
