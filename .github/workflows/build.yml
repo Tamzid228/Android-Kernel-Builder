@@ -1,4 +1,4 @@
-name: "Auto-Diagnostic Kernel Builder"
+name: "Manual Force Kernel Builder"
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
       - name: "😄 Checkout"
         uses: actions/checkout@v4
 
-      - name: "⭐ Prepare Environment"
+      - name: "⭐ Install Prerequisites"
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc curl git zip gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libncurses-dev libfl-dev
@@ -22,18 +22,12 @@ jobs:
           git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
           chmod -R +x ./clang/bin
 
-      - name: "🔍 Diagnostic: Find Configs"
-        run: |
-          echo "Listing all available Samsung-related configs:"
-          find A137F/arch/arm64/configs/ -name "*ve*" || echo "No 've' configs found"
-          echo "---------------------------------------"
-          find A137F/arch/arm64/configs/ -name "*defconfig*" | head -n 20
-
-      - name: "🔨 Build"
+      - name: "🔨 Build (Manual Path)"
         run: |
           export PATH=$(pwd)/clang/bin:$PATH
           cd A137F
           
+          # Environment
           export ARCH=arm64
           export LLVM=1
           export LLVM_IAS=1
@@ -43,25 +37,24 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-          # Clean
+          # Fix Makefile flags
+          find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
+          
           make clean mrproper
           
-          # This line tries to find the config automatically. 
-          # If it fails, it will list all configs and stop so you can pick the right one.
-          CONF=$(find arch/arm64/configs/ -name "*a13ve_defconfig*" | sed 's|arch/arm64/configs/||')
-          
-          if [ -z "$CONF" ]; then
-            echo "ERROR: Could not find a13ve_defconfig automatically."
-            exit 1
+          # FORCE THE PATH: Samsung usually puts it here
+          # We try the vendor path first, then the root path
+          if [ -f "arch/arm64/configs/vendor/a13ve_defconfig" ]; then
+             make vendor/a13ve_defconfig
+          else
+             make a13ve_defconfig
           fi
           
-          echo "Building with config: $CONF"
-          make $CONF
           make -j$(nproc --all)
 
-      - name: "💛 Upload Image"
+      - name: "💛 Upload Final Image"
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-Image
+          name: Samsung-A13-Kernel
           path: A137F/arch/arm64/boot/Image
