@@ -1,12 +1,14 @@
 [
   {
-  "kernelSource": {
-    "name": "A137F",
-    "repo": "https://github.com/Tamzid228/my-kernel-source",
-    "branch": "main",
-    "device": "a13ve"
-  },
-    "withKernelSU": false,
+    "kernelSource": {
+      "name": "A137F",
+      "repo": "https://github.com/Tamzid228/my-kernel-source",
+      "branch": "main",
+      "device": "a13ve"
+    },
+    "withKernelSU": false
+  }
+]
     "toolchains": [
       {
         "repo": "https://github.com/kdrag0n/proton-clang",
