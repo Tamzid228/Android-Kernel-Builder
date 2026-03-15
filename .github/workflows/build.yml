@@ -1,4 +1,4 @@
-name: "Clean Slate Kernel Builder"
+name: "Auto-Diagnostic Kernel Builder"
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
       - name: "😄 Checkout"
         uses: actions/checkout@v4
 
-      - name: "⭐ Install Prerequisites"
+      - name: "⭐ Prepare Environment"
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bc curl git zip gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libncurses-dev libfl-dev
@@ -22,7 +22,14 @@ jobs:
           git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
           chmod -R +x ./clang/bin
 
-      - name: "🔨 Compile Kernel"
+      - name: "🔍 Diagnostic: Find Configs"
+        run: |
+          echo "Listing all available Samsung-related configs:"
+          find A137F/arch/arm64/configs/ -name "*ve*" || echo "No 've' configs found"
+          echo "---------------------------------------"
+          find A137F/arch/arm64/configs/ -name "*defconfig*" | head -n 20
+
+      - name: "🔨 Build"
         run: |
           export PATH=$(pwd)/clang/bin:$PATH
           cd A137F
@@ -36,22 +43,25 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-          # Fix Makefile errors
-          find . -type f -name "Makefile*" -exec sed -i 's/-mno-global-merge//g' {} +
-          
-          # AUTO-DETECT CONFIG: This looks for the right a13ve file
-          CONF_FILE=$(find arch/arm64/configs/ -name "*a13ve_defconfig*" | sed 's|arch/arm64/configs/||')
-          echo "Found Config: $CONF_FILE"
-          
+          # Clean
           make clean mrproper
-          # If it found a file, use it. Otherwise, fallback to vendor/a13ve_defconfig
-          make ${CONF_FILE:-vendor/a13ve_defconfig}
           
+          # This line tries to find the config automatically. 
+          # If it fails, it will list all configs and stop so you can pick the right one.
+          CONF=$(find arch/arm64/configs/ -name "*a13ve_defconfig*" | sed 's|arch/arm64/configs/||')
+          
+          if [ -z "$CONF" ]; then
+            echo "ERROR: Could not find a13ve_defconfig automatically."
+            exit 1
+          fi
+          
+          echo "Building with config: $CONF"
+          make $CONF
           make -j$(nproc --all)
 
-      - name: "💛 Upload Final Image"
+      - name: "💛 Upload Image"
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Samsung-A13-Kernel
+          name: Kernel-Image
           path: A137F/arch/arm64/boot/Image
